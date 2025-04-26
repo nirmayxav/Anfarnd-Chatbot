@@ -1,0 +1,12 @@
+name: Build and Deploy to GCP VM
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Workflow triggers are working ✔︎"
