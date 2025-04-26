@@ -1,2 +1,5 @@
+google-cloud-sdk/
+*.tar.gz
+*.zip
+node_modules/
 .env
-node_modules
