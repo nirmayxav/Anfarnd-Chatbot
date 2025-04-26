@@ -32,11 +32,12 @@
       const thinkingNode = appendThinking('💭 Thinking...');
 
       try {
-        const res = await fetch('http://localhost:3000/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: q })
-        });
+        const res = await fetch('/chat', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ question: q })
+});
+
         const data = await res.json();
 
         // Replace thinking bubble with final response
