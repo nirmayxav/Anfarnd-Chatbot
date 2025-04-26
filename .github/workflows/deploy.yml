@@ -1,12 +1,47 @@
 name: Build and Deploy to GCP VM
 
+# ──► WHEN to run
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches: [main]          # run every time code is pushed to main
+  workflow_dispatch:          # plus a manual “Run workflow” button
 
 jobs:
-  test:
+  build-deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - run: echo "Workflow triggers are working ✔︎"
+    # 1. Checkout code
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    # 2. Authenticate to Google Cloud
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+    # 3. Build Docker image
+    - name: Build Docker image
+      run: |
+        docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/chatbot-app .
+
+    # 4. Push image to GCR
+    - name: Push image to GCR
+      run: |
+        gcloud auth configure-docker
+        docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/chatbot-app
+
+    # 5. SSH into VM and deploy
+    - name: SSH into VM and deploy
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.VM_HOST }}
+        username: ${{ secrets.VM_USER }}
+        key: ${{ secrets.VM_SSH_KEY }}
+        script: |
+          docker pull gcr.io/${{ secrets.GCP_PROJECT_ID }}/chatbot-app
+          docker stop chatbot-container || true
+          docker rm   chatbot-container || true
+          docker run -d -p 80:3000 --name chatbot-container \
+            gcr.io/${{ secrets.GCP_PROJECT_ID }}/chatbot-app
