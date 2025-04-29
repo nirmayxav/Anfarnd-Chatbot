@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Official Client Info Bot</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <img src="logo.png" alt="Company Logo" class="logo">
+    <h1>Client Info Portal</h1>
+    <p>Ask any question about our 10 clients—powered by your own documentation.</p>
+  </header>
+  <main>
+    <div id="chat"></div>
+    <div id="input">
+      <input id="text" type="text" placeholder="Type your question here…" autocomplete="off"/>
+      <button id="send">Send</button>
+    </div>
+  </main>
+
+  <script>
+    async function send() {
+      const inp = document.getElementById('text');
+      const q = inp.value.trim();
+      if (!q) return;
+      append(q, 'user');
+      inp.value = '';
+
+      // Show thinking bubble
+      const thinkingNode = appendThinking('💭 Thinking...');
+
+      try {
+        const res = await fetch('/chat', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ question: q })
+});
+
+        const data = await res.json();
+
+        // Replace thinking bubble with final response
+        thinkingNode.remove(); // Remove the old bubble
+        append(data.answer || data.error, 'bot');
+      } catch (err) {
+        thinkingNode.textContent = '⚠️ Unable to reach server.';
+        thinkingNode.classList.remove('thinking');
+        thinkingNode.classList.add('error');
+        console.error(err);
+      }
+    }
+
+    // Renders a temporary "thinking" bubble and returns the DOM node
+    function appendThinking(text) {
+      const chat = document.getElementById('chat');
+      const d = document.createElement('div');
+      d.className = 'msg bot thinking';
+      d.textContent = text;
+      chat.appendChild(d);
+      chat.scrollTop = chat.scrollHeight;
+      return d;
+    }
+
+    // Handles full responses with formatting
+    function append(text, who, extraClass = '') {
+      const chat = document.getElementById('chat');
+
+      text = text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Markdown bold
+        .replace(/__(.*?)__/g, '<strong>$1</strong>')
+        .replace(/[\*\-]\s*<strong>(.*?)<\/strong>:/g, '<br><br><strong>$1:</strong>') // Section headers
+        .replace(/[\*\-]\s+(?!<strong>)/g, '<br>&nbsp;&nbsp;• ') // Bullets
+        .replace(/(\d+\.)\s+/g, '<br>&nbsp;&nbsp;$1 ') // Numbered points
+        .replace(/\n/g, '<br>')
+        .replace(/(<br>\s*){2,}/g, '<br><br>'); // Clean spacing
+
+      const parts = text.split(/<br><br>/).filter(p => p.trim() !== '');
+
+      parts.forEach(part => {
+        const d = document.createElement('div');
+        d.className = `msg ${who}` + (extraClass ? ` ${extraClass}` : '');
+        d.innerHTML = part.trim();
+        chat.appendChild(d);
+      });
+
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    document.getElementById('send').onclick = send;
+    document.getElementById('text').addEventListener('keydown', e => {
+      if (e.key === 'Enter') send();
+    });
+  </script>
+</body>
+</html>
